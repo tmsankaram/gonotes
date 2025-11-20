@@ -50,3 +50,24 @@ func (s *Service) SetTOTP(userID uint, secret string) error {
 		"totp_enabled": true,
 	}).Error
 }
+
+func (s *Service) GetByOauth(provider, oauthID string) (User, error) {
+	var u User
+	err := s.db.Where("oauth_provider = ? AND oauth_id = ?", provider, oauthID).First(&u).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return User{}, nil
+	}
+	return u, err
+}
+
+func (s *Service) CreateOAuthUser(email, provider, oauthID string) (User, error) {
+	u := User{
+		Email:         email,
+		OAuthProvider: provider,
+		OAuthID:       oauthID,
+	}
+	if err := s.db.Create(&u).Error; err != nil {
+		return User{}, err
+	}
+	return u, nil
+}

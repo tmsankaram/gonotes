@@ -47,6 +47,17 @@ func (s *Service) Paginated(page, limit int) ([]Note, int64, error) {
 	return notes, total, err
 }
 
+// ListNotes godoc
+// @Summary List notes
+// @Description Get paginated notes
+// @Tags notes
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number"
+// @Param limit query int false "Limit"
+// @Success 200 {object} response.ListResponse
+// @Security ApiKeyAuth
+// @Router /notes [get]
 func (h *Handler) getAll(c *gin.Context) {
 	var q NoteQuery
 	if err := c.ShouldBindQuery(&q); err != nil {

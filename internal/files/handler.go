@@ -26,6 +26,17 @@ func (h *Handler) RegisterRoutes(r *gin.Engine) {
 	}
 }
 
+// UploadFile godoc
+// @Summary Upload file
+// @Description Upload a file
+// @Tags files
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "file to upload"
+// @Success 201 {object} files.File
+// @Failure 400 {object} response.ErrorResponse
+// @Security ApiKeyAuth
+// @Router /files/upload [post]
 func (h *Handler) upload(c *gin.Context) {
 	fileHeader, err := c.FormFile("file")
 	if err != nil {

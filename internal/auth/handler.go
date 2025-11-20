@@ -50,6 +50,16 @@ func (h *Handler) RegisterProtectedRoutes(r *gin.Engine) {
 	})
 }
 
+// Register godoc
+// @Summary Register user
+// @Description Create a new user
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param payload body RegisterReq true "Register payload"
+// @Success 201 {object} response.SuccessResponse
+// @Failure 400 {object} response.ErrorResponse
+// @Router /auth/register [post]
 func (h *Handler) Register(c *gin.Context) {
 	var req RegisterReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -76,6 +86,16 @@ func (h *Handler) Register(c *gin.Context) {
 	response.Created(c, "user registered", gin.H{"id": u.ID, "email": u.Email})
 }
 
+// Login godoc
+// @Summary Login
+// @Description Login with email + password
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param payload body LoginReq true "Login payload"
+// @Success 200 {object} response.SuccessResponse
+// @Failure 401 {object} response.ErrorResponse
+// @Router /auth/login [post]
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginReq
 

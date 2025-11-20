@@ -16,6 +16,23 @@ import (
 	"github.com/tmsankram/gonotes/internal/users"
 )
 
+// @title GoNotes API
+// @version 1.0
+// @description GoNotes — Notes API with Gin, GORM, OAuth, TOTP, GraphQL (read).
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name Deva
+// @contact.email you@example.com
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @host localhost:8000
+// @BasePath /
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
 func main() {
 	cfg := config.Load()  // load configuration
 	db := db.Connect(cfg) // connect to the database

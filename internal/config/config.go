@@ -16,6 +16,14 @@ type Config struct {
 	DBUser string
 	DBPass string
 	DBName string
+
+	GoogleClientID     string
+	GoogleClientSecret string
+	GoogleRedirectURL  string
+
+	GithubClientID     string
+	GithubClientSecret string
+	GithubRedirectURL  string
 }
 
 func Load() *Config {
@@ -34,12 +42,21 @@ func Load() *Config {
 	}
 
 	return &Config{
-		Port:   port,
+		Port: port,
+
 		DBHost: getEnv("DB_HOST", "localhost"),
 		DBPort: dbPort,
 		DBUser: getEnv("DB_USER", "postgres"),
 		DBPass: getEnv("DB_PASS", ""),
 		DBName: getEnv("DB_NAME", "postgres"),
+
+		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
+		GoogleRedirectURL:  getEnv("GOOGLE_REDIRECT_URL", ""),
+
+		GithubClientID:     getEnv("GITHUB_CLIENT_ID", ""),
+		GithubClientSecret: getEnv("GITHUB_CLIENT_SECRET", ""),
+		GithubRedirectURL:  getEnv("GITHUB_REDIRECT_URL", ""),
 	}
 }
 
