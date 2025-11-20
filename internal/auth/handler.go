@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pquerna/otp/totp"
 	"github.com/tmsankram/gonotes/internal/response"
 	"github.com/tmsankram/gonotes/internal/users"
 )
@@ -12,13 +13,41 @@ type Handler struct {
 	users *users.Service
 }
 
+type RegisterReq struct {
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=6"`
+}
+
+type LoginReq struct {
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required"`
+	TOTP     string `json:"totp"`
+}
+
 func NewHandler(users *users.Service) *Handler {
 	return &Handler{users: users}
 }
 
-type RegisterReq struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=6"`
+// RegisterRoutes registers the public auth routes.
+// These do not require authentication.
+func (h *Handler) RegisterPublicRoutes(r *gin.Engine) {
+	r.POST("/auth/register", h.Register)
+	r.POST("/auth/login", h.Login)
+}
+
+// RegisterProtectedRoutes registers authenticated auth routes like /auth/me.
+func (h *Handler) RegisterProtectedRoutes(r *gin.Engine) {
+	protected := r.Group("/auth")
+	protected.Use(AuthRequired())
+	protected.GET("/me", func(c *gin.Context) {
+		userID := c.GetUint("userID")
+		u, err := h.users.GetByID(userID)
+		if err != nil {
+			response.Internal(c, err)
+			return
+		}
+		c.JSON(200, gin.H{"user": u})
+	})
 }
 
 func (h *Handler) Register(c *gin.Context) {
@@ -47,11 +76,6 @@ func (h *Handler) Register(c *gin.Context) {
 	response.Created(c, "user registered", gin.H{"id": u.ID, "email": u.Email})
 }
 
-type LoginReq struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required"`
-}
-
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginReq
 
@@ -76,6 +100,18 @@ func (h *Handler) Login(c *gin.Context) {
 	if err != nil {
 		response.Internal(c, err)
 		return
+	}
+
+	if u.TOTPEnabled {
+		if req.TOTP == "" {
+			response.Unauthorized(c, errors.New("TOTP required"))
+			return
+		}
+
+		if !totp.Validate(req.TOTP, u.TOTPSecret) {
+			response.Unauthorized(c, errors.New("invalid TOTP"))
+			return
+		}
 	}
 
 	response.Success(c, "login successful", gin.H{"token": token})

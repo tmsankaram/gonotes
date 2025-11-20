@@ -37,22 +37,6 @@ func New(db *gorm.DB) *gin.Engine {
 	usersSvc := users.NewService(db) // users service depends on db
 	filesSvc := files.NewService()   // files service using in memory storage
 
-	// Auth Handler
-	authHandler := auth.NewHandler(usersSvc)
-
-	// Auth Group
-	protected := r.Group("/auth")
-	protected.Use(auth.AuthRequired())
-	protected.GET("/me", func(ctx *gin.Context) {
-		userID := ctx.GetUint("userID")
-		u, _ := usersSvc.GetByID(userID)
-		ctx.JSON(200, gin.H{"user": u})
-	})
-
-	// Auth routes
-	r.POST("/auth/register", authHandler.Register)
-	r.POST("/auth/login", authHandler.Login)
-
 	// Notes Handler
 	notesHandler := notes.NewHandler(notesSvc)
 	notesHandler.RegisterRoutes(r)
@@ -60,6 +44,14 @@ func New(db *gorm.DB) *gin.Engine {
 	// Files Handler
 	filesHandler := files.NewHandler(filesSvc)
 	filesHandler.RegisterRoutes(r)
+
+	authHandler := auth.NewHandler(usersSvc)
+	totpHandler := auth.NewTOTPHandler(usersSvc)
+
+	// Auth routes moved to handlers
+	authHandler.RegisterPublicRoutes(r)
+	authHandler.RegisterProtectedRoutes(r)
+	totpHandler.RegisterRoutes(r)
 
 	return r
 }
