@@ -11,6 +11,7 @@ import (
 	"github.com/tmsankram/gonotes/internal/files"
 	"github.com/tmsankram/gonotes/internal/middleware"
 	"github.com/tmsankram/gonotes/internal/notes"
+	"github.com/tmsankram/gonotes/internal/ui"
 	"github.com/tmsankram/gonotes/internal/users"
 	myval "github.com/tmsankram/gonotes/internal/validator"
 
@@ -27,11 +28,23 @@ func New(db *gorm.DB) *gin.Engine {
 	r.Use(middleware.RequestID())
 	r.Use(middleware.Logger())
 	r.Use(middleware.Recovery())
+	r.Use(ui.FlashMiddleware())
 
 	// register custom validator
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		_ = v.RegisterValidation("notest", myval.TitleNoTest)
 	}
+
+	t := ui.LoadTemplates()
+	renderer := ui.NewRenderer(t)
+
+	r.Static("/static", "./ui/static")
+	// Public UI routes
+	r.GET("/", func(c *gin.Context) {
+		renderer.Page(c, "layout.html", gin.H{
+			"Title": "Home",
+		})
+	})
 
 	// Health check
 	r.GET("/health", func(ctx *gin.Context) {

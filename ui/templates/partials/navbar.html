@@ -1,0 +1,15 @@
+{{define "navbar"}}
+<nav class="navbar">
+	<a href="/">Home</a>
+
+	{{if .User}}
+	<a href="/notes">Notes</a>
+	<a href="/logout">Logout ({{.User.Username}})</a>
+
+	{{else}}
+	<a href="/login">Login</a>
+	<a href="/register">Register</a>
+	{{end}}
+
+</nav>
+{{end}}
