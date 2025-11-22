@@ -1,0 +1,9 @@
+{{ define "notes/edit.html" }}
+<form hx-post="/notes/{{ .Note.ID }}/edit" hx-target="#note-{{ .Note.ID }}" hx-swap="outerHTML">
+
+	<input name="title" value="{{ .Note.Title }}" required>
+	<textarea name="content">{{ .Note.Content }}</textarea>
+
+	<button type="submit">Save</button>
+</form>
+{{ end }}

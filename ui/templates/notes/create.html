@@ -1,0 +1,9 @@
+{{ define "notes/create.html" }}
+<form hx-post="/notes/create" hx-target="#notes-list" hx-swap="beforebegin">
+
+	<input name="title" placeholder="Title" required>
+	<textarea name="content" placeholder="Content"></textarea>
+
+	<button type="submit">Create</button>
+</form>
+{{ end }}

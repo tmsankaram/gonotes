@@ -1,0 +1,14 @@
+{{ define "notes/item.html" }}
+<div class="note-item">
+	<h3>{{ .Title }}</h3>
+	<p>{{ .Content }}</p>
+
+	<button hx-get="/notes/{{ .ID }}/edit" hx-target="#note-{{ .ID }}" hx-swap="outerHTML">
+		Edit
+	</button>
+
+	<button hx-delete="/notes/{{ .ID }}/delete" hx-target="#note-{{ .ID }}" hx-swap="outerHTML">
+		Delete
+	</button>
+</div>
+{{ end }}

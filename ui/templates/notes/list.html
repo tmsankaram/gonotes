@@ -1,0 +1,23 @@
+{{ define "notes/list.html" }}
+{{ template "layout.html" . }}
+{{ end }}
+
+{{ define "content" }}
+
+<h2>Your Notes</h2>
+
+<button hx-get="/notes/create-form" hx-target="#create-form-container" hx-swap="innerHTML">
+	New Note
+</button>
+
+<div id="create-form-container"></div>
+
+<ul id="notes-list">
+	{{ range .Notes }}
+	<li id="note-{{ .ID }}">
+		{{ template "notes/item.html" . }}
+	</li>
+	{{ end }}
+</ul>
+
+{{ end }}

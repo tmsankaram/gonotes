@@ -114,6 +114,7 @@ func (a *application) registerAPIRoutes() {
 
 func (a *application) registerUIRoutes() {
 	authUI := ui.NewAuthUI(a.services.users, a.renderer)
+	notesUI := ui.NewNotesUI(a.services.notes, a.renderer)
 
 	a.router.GET("/login", authUI.LoginPage)
 	a.router.POST("/login", authUI.LoginPost)
@@ -121,17 +122,18 @@ func (a *application) registerUIRoutes() {
 	a.router.POST("/register", authUI.RegisterPost)
 
 	a.router.GET("/logout", a.logout)
-	a.router.GET("/notes", a.notesPage)
+
+	// notes UI
+	a.router.GET("/notes", notesUI.NotesPage)
+	a.router.GET("/notes/create-form", notesUI.CreateForm)
+	a.router.POST("/notes/create", notesUI.CreatePost)
+	a.router.GET("/notes/:id/edit", notesUI.EditForm)
+	a.router.POST("/notes/:id/edit", notesUI.EditPost)
+	a.router.DELETE("/notes/:id/delete", notesUI.Delete)
 }
 
 func (a *application) logout(c *gin.Context) {
 	c.SetCookie(ui.JWT_COOKIE, "", -1, "/", "", false, true)
 	ui.Flash(c, "Logged out")
 	c.Redirect(http.StatusFound, "/")
-}
-
-func (a *application) notesPage(c *gin.Context) {
-	a.renderer.Page(c, "notes/list.html", gin.H{
-		"Title": "Notes",
-	})
 }
