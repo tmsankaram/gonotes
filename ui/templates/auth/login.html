@@ -1,0 +1,29 @@
+{{ define "auth/login.html" }}
+{{ template "layout.html" . }}
+{{ define "content" }}
+<h2>Login</h2>
+
+<div id="login-fragment">
+	{{ if .Flash }}
+	<div class="error">{{ .Flash }}</div>
+	{{ end }}
+
+	<form hx-post="/login" hx-target="#login-fragment" hx-swap="innerHTML" method="post">
+		<input type="hidden" name="csrf" value="{{ .CSRF }}">
+		<div>
+			<label>Email</label>
+			<input name="email" type="email" required />
+		</div>
+		<div>
+			<label>Password</label>
+			<input name="password" type="password" required />
+		</div>
+		<div>
+			<button type="submit">Login</button>
+		</div>
+	</form>
+
+	<p>Don't have an account? <a href="/register">Register</a></p>
+</div>
+{{ end }}
+{{ end }}

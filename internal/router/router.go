@@ -1,6 +1,8 @@
 package router
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
@@ -80,6 +82,28 @@ func New(db *gorm.DB) *gin.Engine {
 
 	r.GET("/auth/github/login", oauthHandler.GithubLogin)
 	r.GET("/auth/github/callback", oauthHandler.GithubCallback)
+
+	// assume renderer := ui.NewRenderer(t)
+	authUI := ui.NewAuthUI(usersSvc, renderer)
+	r.Use(ui.SessionMiddleware(usersSvc))
+
+	// UI routes
+	r.GET("/login", authUI.LoginPage)
+	r.POST("/login", authUI.LoginPost)
+	r.GET("/register", authUI.RegisterPage)
+	r.POST("/register", authUI.RegisterPost)
+	r.GET("/logout", func(c *gin.Context) {
+		// clear cookie
+		c.SetCookie(ui.JWT_COOKIE, "", -1, "/", "", false, true)
+		ui.Flash(c, "Logged out")
+		c.Redirect(http.StatusFound, "/")
+	})
+	r.GET("/notes", func(c *gin.Context) {
+		// For now, render a placeholder. We'll implement real notes UI in next step.
+		renderer.Page(c, "notes/list.html", gin.H{
+			"Title": "Notes",
+		})
+	})
 
 	return r
 }
