@@ -23,87 +23,115 @@ import (
 )
 
 func New(db *gorm.DB) *gin.Engine {
-	cfg := config.Load() // load configuration
-	r := gin.New()
+	cfg := config.Load()
+	app := newApplication(db, cfg)
 
-	// Global Middleware
-	r.Use(middleware.RequestID())
-	r.Use(middleware.Logger())
-	r.Use(middleware.Recovery())
-	r.Use(ui.FlashMiddleware())
+	app.registerCustomValidators()
+	app.registerGlobalMiddleware()
+	app.router.Static("/static", "./ui/static")
 
-	// register custom validator
+	app.registerUtilityRoutes()
+	app.registerAPIRoutes()
+	app.registerUIRoutes()
+
+	return app.router
+}
+
+type application struct {
+	router   *gin.Engine
+	cfg      *config.Config
+	renderer *ui.Renderer
+	services serviceContainer
+}
+
+type serviceContainer struct {
+	notes *notes.Service
+	users *users.Service
+	files *files.Service
+}
+
+func newApplication(db *gorm.DB, cfg *config.Config) *application {
+	renderer := ui.NewRenderer(ui.LoadTemplates())
+
+	return &application{
+		router:   gin.New(),
+		cfg:      cfg,
+		renderer: renderer,
+		services: serviceContainer{
+			notes: notes.NewService(db),
+			users: users.NewService(db),
+			files: files.NewService(),
+		},
+	}
+}
+
+func (a *application) registerCustomValidators() {
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		_ = v.RegisterValidation("notest", myval.TitleNoTest)
 	}
+}
 
-	t := ui.LoadTemplates()
-	renderer := ui.NewRenderer(t)
+func (a *application) registerGlobalMiddleware() {
+	a.router.Use(
+		middleware.RequestID(),
+		middleware.Logger(),
+		middleware.Recovery(),
+		ui.FlashMiddleware(),
+		ui.SessionMiddleware(a.services.users),
+	)
+}
 
-	r.Static("/static", "./ui/static")
-	// Public UI routes
-	r.GET("/", func(c *gin.Context) {
-		renderer.Page(c, "layout.html", gin.H{
+func (a *application) registerUtilityRoutes() {
+	a.router.GET("/", func(c *gin.Context) {
+		a.renderer.Page(c, "layout.html", gin.H{
 			"Title": "Home",
 		})
 	})
 
-	// Health check
-	r.GET("/health", func(ctx *gin.Context) {
-		ctx.JSON(200, gin.H{"status": "ok"})
+	a.router.GET("/health", func(ctx *gin.Context) {
+		ctx.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	a.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+}
 
-	// Services
-	notesSvc := notes.NewService(db) // notes service depends on db
-	usersSvc := users.NewService(db) // users service depends on db
-	filesSvc := files.NewService()   // files service using in memory storage
+func (a *application) registerAPIRoutes() {
+	notes.NewHandler(a.services.notes).RegisterRoutes(a.router)
+	files.NewHandler(a.services.files).RegisterRoutes(a.router)
 
-	// Notes Handler
-	notesHandler := notes.NewHandler(notesSvc)
-	notesHandler.RegisterRoutes(r)
+	authHandler := auth.NewHandler(a.services.users)
+	authHandler.RegisterPublicRoutes(a.router)
+	authHandler.RegisterProtectedRoutes(a.router)
 
-	// Files Handler
-	filesHandler := files.NewHandler(filesSvc)
-	filesHandler.RegisterRoutes(r)
+	auth.NewTOTPHandler(a.services.users).RegisterRoutes(a.router)
 
-	authHandler := auth.NewHandler(usersSvc)
-	totpHandler := auth.NewTOTPHandler(usersSvc)
+	oauthHandler := auth.NewOauthHandler(a.services.users, a.cfg)
+	a.router.GET("/auth/google/login", oauthHandler.GoogleLogin)
+	a.router.GET("/auth/google/callback", oauthHandler.GoogleCallback)
+	a.router.GET("/auth/github/login", oauthHandler.GithubLogin)
+	a.router.GET("/auth/github/callback", oauthHandler.GithubCallback)
+}
 
-	oauthHandler := auth.NewOauthHandler(usersSvc, cfg)
+func (a *application) registerUIRoutes() {
+	authUI := ui.NewAuthUI(a.services.users, a.renderer)
 
-	// Auth routes moved to handlers
-	authHandler.RegisterPublicRoutes(r)
-	authHandler.RegisterProtectedRoutes(r)
-	totpHandler.RegisterRoutes(r)
-	r.GET("/auth/google/login", oauthHandler.GoogleLogin)
-	r.GET("/auth/google/callback", oauthHandler.GoogleCallback)
+	a.router.GET("/login", authUI.LoginPage)
+	a.router.POST("/login", authUI.LoginPost)
+	a.router.GET("/register", authUI.RegisterPage)
+	a.router.POST("/register", authUI.RegisterPost)
 
-	r.GET("/auth/github/login", oauthHandler.GithubLogin)
-	r.GET("/auth/github/callback", oauthHandler.GithubCallback)
+	a.router.GET("/logout", a.logout)
+	a.router.GET("/notes", a.notesPage)
+}
 
-	// assume renderer := ui.NewRenderer(t)
-	authUI := ui.NewAuthUI(usersSvc, renderer)
-	r.Use(ui.SessionMiddleware(usersSvc))
+func (a *application) logout(c *gin.Context) {
+	c.SetCookie(ui.JWT_COOKIE, "", -1, "/", "", false, true)
+	ui.Flash(c, "Logged out")
+	c.Redirect(http.StatusFound, "/")
+}
 
-	// UI routes
-	r.GET("/login", authUI.LoginPage)
-	r.POST("/login", authUI.LoginPost)
-	r.GET("/register", authUI.RegisterPage)
-	r.POST("/register", authUI.RegisterPost)
-	r.GET("/logout", func(c *gin.Context) {
-		// clear cookie
-		c.SetCookie(ui.JWT_COOKIE, "", -1, "/", "", false, true)
-		ui.Flash(c, "Logged out")
-		c.Redirect(http.StatusFound, "/")
+func (a *application) notesPage(c *gin.Context) {
+	a.renderer.Page(c, "notes/list.html", gin.H{
+		"Title": "Notes",
 	})
-	r.GET("/notes", func(c *gin.Context) {
-		// For now, render a placeholder. We'll implement real notes UI in next step.
-		renderer.Page(c, "notes/list.html", gin.H{
-			"Title": "Notes",
-		})
-	})
-
-	return r
 }
